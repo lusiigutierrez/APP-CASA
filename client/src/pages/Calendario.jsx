@@ -106,7 +106,6 @@ export default function Calendario() {
           modal={modal}
           events={events}
           members={members}
-          household={household}
           onClose={() => setModal(null)}
           onSaved={loadEvents}
         />
@@ -115,11 +114,9 @@ export default function Calendario() {
   );
 }
 
-function DayModal({ modal, events, members, household, onClose, onSaved }) {
+function DayModal({ modal, events, members, onClose, onSaved }) {
   const editing = modal.editingId ? events.find(e => e._id === modal.editingId) : null;
   const d = new Date(modal.date + 'T00:00:00');
-  const dayEvents = expandRecurring(events, modal.date, modal.date)
-    .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
   const [title, setTitle] = useState(editing?.title || '');
   const [start, setStart] = useState(editing?.date || modal.date);
@@ -132,19 +129,6 @@ function DayModal({ modal, events, members, household, onClose, onSaved }) {
 
   const opts = peopleOptions(members);
 
-  const startEdit = (ev) => {
-    // Si `ev` es una ocurrencia expandida de un evento recurrente, se edita la regla
-    // original (con su fecha ancla real), no la fecha concreta de esta ocurrencia.
-    const anchor = events.find(x => x._id === ev._id) || ev;
-    setEditingId(anchor._id);
-    setTitle(anchor.title);
-    setStart(anchor.date);
-    setEnd(anchor.endDate || anchor.date);
-    setAllDay(anchor.allDay);
-    setTime(anchor.time || '');
-    setWho(anchor.who);
-    setRecurring(anchor.recurring || 'none');
-  };
   const resetForm = () => {
     setEditingId(null); setTitle(''); setStart(modal.date); setEnd(modal.date);
     setAllDay(false); setTime(''); setWho('shared'); setRecurring('none');
@@ -179,27 +163,7 @@ function DayModal({ modal, events, members, household, onClose, onSaved }) {
           <button className="del" onClick={onClose}>✕</button>
         </div>
 
-        {dayEvents.length ? dayEvents.map(e => {
-          const p = getPerson(members, e.who, household);
-          const eEnd = e.endDate || e.date;
-          const isMulti = eEnd > e.date;
-          const when = isMulti
-            ? `${e.date.slice(8, 10)}/${e.date.slice(5, 7)} – ${eEnd.slice(8, 10)}/${eEnd.slice(5, 7)}`
-            : (e.allDay ? 'Todo el día' : (e.time || 'Todo el día'));
-          return (
-            <div key={e._id} className="chip-row" style={{ borderLeftColor: p.color }}>
-              <div className="chip-icon" style={{ background: p.color, fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{p.photo ? <img src={p.photo} alt="" /> : initials(p.name)}</div>
-              <div style={{ flex: 1 }}>
-                <div className="chip-title">{e.title}</div>
-                <div className="chip-sub">{e.recurring && e.recurring !== 'none' ? '↻ ' : ''}{when} · {p.name}</div>
-              </div>
-              <button className="del" onClick={() => startEdit(e)}>✎</button>
-              <button className="del" onClick={() => remove(e._id)}>✕</button>
-            </div>
-          );
-        }) : <div className="empty" style={{ marginBottom: 14 }}>No hay eventos este día.</div>}
-
-        <h3 className="card-h" style={{ marginTop: 16 }}>{editingId ? 'Editar evento' : 'Añadir evento'}</h3>
+        <h3 className="card-h" style={{ marginTop: 0 }}>{editingId ? 'Editar evento' : 'Añadir evento'}</h3>
         <div className="addbar">
           <input className="inp" style={{ flex: '1 1 100%' }} placeholder="Título del evento" value={title} onChange={e => setTitle(e.target.value)} />
         </div>
@@ -238,6 +202,7 @@ function DayModal({ modal, events, members, household, onClose, onSaved }) {
         <div className="row" style={{ gap: 9 }}>
           <button className="btn" style={{ flex: 1 }} onClick={submit}>{editingId ? 'Guardar cambios' : 'Añadir'}</button>
           {editingId && <button className="btn-ghost" onClick={resetForm}>Cancelar</button>}
+          {editingId && <button className="btn-ghost" style={{ color: 'var(--clay-d)' }} onClick={() => remove(editingId)}>Eliminar</button>}
         </div>
       </div>
     </div>
