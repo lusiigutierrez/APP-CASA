@@ -1,13 +1,20 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext.jsx';
-import { fmtDate, getPerson, peopleOptions } from '../utils.js';
+import { fmtDate, getPerson, peopleOptions, MESES } from '../utils.js';
+import { EXP_ICONS } from '../components/icons.jsx';
 
 const CATS = ['Comida', 'Casa', 'Ocio', 'Transporte', 'Otros'];
-const EXP_ICON = {
-  Comida: ['C', 'var(--sage)'], Casa: ['H', 'var(--mustard)'], Ocio: ['O', 'var(--plum)'],
-  Transporte: ['T', 'var(--blue)'], Otros: ['·', 'var(--shared)'],
+const EXP_COLOR = {
+  Comida: 'var(--sage)', Casa: 'var(--mustard)', Ocio: 'var(--plum)',
+  Transporte: 'var(--blue)', Otros: 'var(--shared)',
 };
+
+function monthLabel(monthKey) {
+  const [y, m] = monthKey.split('-');
+  const name = MESES[Number(m) - 1];
+  return name.charAt(0).toUpperCase() + name.slice(1) + ' ' + y;
+}
 
 export default function Gastos() {
   const { household, refreshHousehold } = useAuth();
@@ -42,6 +49,14 @@ export default function Gastos() {
   const maxCat = Math.max(1, ...Object.values(byCat));
   const sorted = [...expenses].sort((a, b) => b.date.localeCompare(a.date));
   const opts = peopleOptions(members);
+
+  const monthGroups = [];
+  sorted.forEach(e => {
+    const key = e.date.slice(0, 7);
+    let group = monthGroups.find(g => g.key === key);
+    if (!group) { group = { key, items: [] }; monthGroups.push(group); }
+    group.items.push(e);
+  });
 
   return (
     <>
@@ -96,18 +111,30 @@ export default function Gastos() {
       </div>
       <div className="card">
         <h3 className="card-h">Historial</h3>
-        {sorted.length ? sorted.map(e => {
-          const icon = EXP_ICON[e.category] || ['·', 'var(--shared)'];
-          const p = getPerson(members, e.person);
+        {monthGroups.length ? monthGroups.map(group => {
+          const monthTotal = group.items.reduce((s, e) => s + Number(e.amount), 0);
           return (
-            <div key={e._id} className="chip-row" style={{ borderLeftColor: icon[1] }}>
-              <div className="chip-icon" style={{ background: icon[1], fontSize: 13, fontWeight: 700, color: 'var(--ink)' }}>{icon[0]}</div>
-              <div style={{ flex: 1 }}>
-                <div className="chip-title">{e.desc}</div>
-                <div className="chip-sub">{e.date.slice(8, 10)}/{e.date.slice(5, 7)} · {e.category} · {p.name}</div>
+            <div key={group.key} style={{ marginBottom: 18 }}>
+              <div className="row between" style={{ marginBottom: 8 }}>
+                <div className="eyebrow" style={{ marginBottom: 0 }}>{monthLabel(group.key)}</div>
+                <span className="mono muted">{monthTotal.toFixed(2)} €</span>
               </div>
-              <span className="mono" style={{ fontWeight: 700 }}>{Number(e.amount).toFixed(2)} €</span>
-              <button className="del" onClick={() => del(e._id)}>✕</button>
+              {group.items.map(e => {
+                const icon = EXP_ICONS[e.category] || EXP_ICONS.Otros;
+                const color = EXP_COLOR[e.category] || 'var(--shared)';
+                const p = getPerson(members, e.person);
+                return (
+                  <div key={e._id} className="chip-row" style={{ borderLeftColor: color }}>
+                    <div className="chip-icon" style={{ background: color, color: 'var(--ink)' }}>{icon}</div>
+                    <div style={{ flex: 1 }}>
+                      <div className="chip-title">{e.desc}</div>
+                      <div className="chip-sub">{e.date.slice(8, 10)}/{e.date.slice(5, 7)} · {e.category} · {p.name}</div>
+                    </div>
+                    <span className="mono" style={{ fontWeight: 700 }}>{Number(e.amount).toFixed(2)} €</span>
+                    <button className="del" onClick={() => del(e._id)}>✕</button>
+                  </div>
+                );
+              })}
             </div>
           );
         }) : <div className="empty">Todavía no hay gastos registrados.</div>}
