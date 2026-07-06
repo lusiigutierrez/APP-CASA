@@ -22,7 +22,8 @@
   --shadow-lg:rgba(90,70,130,0.16);
 }
 *{box-sizing:border-box;}
-body{margin:0;font-family:'Karla',sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;}
+html,body{height:100%;overscroll-behavior:none;}
+body{margin:0;overflow:hidden;font-family:'Karla',sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased;}
 h1,h2,h3{font-family:'Bricolage Grotesque',sans-serif;margin:0;}
 .mono{font-family:'JetBrains Mono',monospace;}
 button{font-family:'Karla',sans-serif;cursor:pointer;border:none;}
@@ -40,7 +41,7 @@ a{color:var(--blue-d);}
 .auth-card .btn{margin-top:16px;}
 .auth-error{background:#FBEEEA;color:var(--clay-d);border-radius:10px;padding:9px 12px;font-size:13px;font-weight:600;margin-bottom:6px;}
 
-#app{display:flex;min-height:100vh;min-height:100dvh;}
+#app{display:flex;height:100vh;height:100dvh;overflow:hidden;}
 
 /* SIDEBAR */
 #sidebar{
@@ -49,6 +50,7 @@ a{color:var(--blue-d);}
   border-right:1px solid var(--line);
   padding:28px 0 28px 22px;
   position:relative;
+  overflow-y:auto;
 }
 .brand{display:flex;align-items:center;gap:9px;padding-right:22px;margin-bottom:4px;}
 .brand h1{font-size:21px;font-weight:800;letter-spacing:-0.5px;line-height:1.15;color:var(--ink);}
@@ -86,10 +88,10 @@ a{color:var(--blue-d);}
 .tab-perfil{background:var(--shared);margin-top:16px;}
 
 /* MAIN */
-#main{flex:1;position:relative;overflow-x:hidden;
+#main{flex:1;min-height:0;position:relative;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
   background:linear-gradient(160deg,#FCF7FB 0%,#F5F1FB 45%,#EFF3FA 100%);
 }
-#main::before,#main::after{content:'';position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0;}
+#main::before,#main::after{content:'';position:fixed;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0;}
 #main::before{width:420px;height:420px;background:#F4CFE0;opacity:.35;top:-140px;right:-100px;}
 #main::after{width:380px;height:380px;background:#C9DDF3;opacity:.4;bottom:-120px;left:20%;}
 #main-inner{position:relative;z-index:1;padding:40px 46px;}

@@ -6,10 +6,10 @@ import { ICONS } from './icons.jsx';
 const SECTIONS = [
   { to: '/app', end: true, id: 'inicio', label: 'Inicio' },
   { to: '/app/calendario', id: 'calendario', label: 'Calendario' },
-  { to: '/app/compra', id: 'compra', label: 'La compra' },
-  { to: '/app/gastos', id: 'gastos', label: 'Gastos' },
-  { to: '/app/tareas', id: 'tareas', label: 'Tareas' },
   { to: '/app/menu', id: 'menu', label: 'Menú semanal' },
+  { to: '/app/gastos', id: 'gastos', label: 'Gastos' },
+  { to: '/app/compra', id: 'compra', label: 'La compra' },
+  { to: '/app/tareas', id: 'tareas', label: 'Tareas' },
   { to: '/app/notas', id: 'notas', label: 'Notas' },
   { to: '/app/perfil', id: 'perfil', label: 'Perfil de casa' },
 ];
