@@ -2,11 +2,24 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext.jsx';
+import { resizePhotoToDataURL } from '../utils.js';
 
 const MEMBER_COLORS = ['#B7D0EC', '#F4C9BC', '#BFE0D0', '#F6DFA6', '#DCC6EA', '#A9DED2', '#EFC7D6', '#C6CDE8'];
 
 function initials(name) {
   return (name || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+}
+
+function PhotoAvatar({ photo, color, label, size = 40, onPick, onRemove }) {
+  return (
+    <div className="photo-avatar" style={{ width: size, height: size }}>
+      <label className="photo-avatar-circle" style={{ background: color }}>
+        {photo ? <img src={photo} alt="" /> : <span style={{ fontSize: size * 0.36 }}>{label}</span>}
+        <input type="file" accept="image/*" hidden onChange={e => { if (e.target.files[0]) onPick(e.target.files[0]); e.target.value = ''; }} />
+      </label>
+      {photo && onRemove && <button type="button" className="photo-avatar-remove" onClick={onRemove}>✕</button>}
+    </div>
+  );
 }
 
 export default function Perfil() {
@@ -26,6 +39,18 @@ export default function Perfil() {
   const renameMember = async (id, name) => { await api.patch(`/household/members/${id}`, { name }); refreshHousehold(); };
   const recolorMember = async (id, color) => { await api.patch(`/household/members/${id}`, { color }); refreshHousehold(); };
   const removeMember = async (id) => { await api.del(`/household/members/${id}`); refreshHousehold(); };
+  const setMemberPhoto = async (id, file) => {
+    const photo = await resizePhotoToDataURL(file);
+    await api.patch(`/household/members/${id}`, { photo });
+    refreshHousehold();
+  };
+  const removeMemberPhoto = async (id) => { await api.patch(`/household/members/${id}`, { photo: '' }); refreshHousehold(); };
+  const setHousePhoto = async (file) => {
+    const photo = await resizePhotoToDataURL(file);
+    await api.patch('/household/photo', { photo });
+    refreshHousehold();
+  };
+  const removeHousePhoto = async () => { await api.patch('/household/photo', { photo: '' }); refreshHousehold(); };
 
   const copyInvite = () => {
     navigator.clipboard.writeText(household?.inviteCode || '');
@@ -41,6 +66,11 @@ export default function Perfil() {
 
       <div className="card">
         <h3 className="card-h">Nombre de la casa</h3>
+        <div className="row" style={{ gap: 14, marginBottom: 14 }}>
+          <PhotoAvatar photo={household?.photo} color="var(--shared)" label="🏠" size={56}
+            onPick={setHousePhoto} onRemove={removeHousePhoto} />
+          <div className="muted" style={{ fontSize: 12.5 }}>Esta foto se usa en los eventos del calendario que incluyen a todos.</div>
+        </div>
         <input className="inp" style={{ width: '100%', maxWidth: 320 }} defaultValue={household?.name}
           onBlur={e => setHomeName(e.target.value)} />
       </div>
@@ -59,11 +89,12 @@ export default function Perfil() {
         {(household?.members || []).map(m => (
           <div key={m._id}>
             <div className="member-card">
-              <div className="avatar" style={{ background: m.color, marginLeft: 0 }}>{initials(m.name)}</div>
+              <PhotoAvatar photo={m.photo} color={m.color} label={initials(m.name)}
+                onPick={file => setMemberPhoto(m._id, file)} onRemove={() => removeMemberPhoto(m._id)} />
               <input className="inp" style={{ flex: 1 }} defaultValue={m.name} onBlur={e => renameMember(m._id, e.target.value)} />
               <button className="del" onClick={() => removeMember(m._id)}>✕</button>
             </div>
-            <div className="color-row" style={{ margin: '-4px 0 12px 46px' }}>
+            <div className="color-row" style={{ margin: '4px 0 12px 52px' }}>
               {MEMBER_COLORS.map(c => (
                 <div key={c} className="color-dot" style={{ background: c, boxShadow: m.color === c ? `0 0 0 2px ${c}` : undefined }}
                   onClick={() => recolorMember(m._id, c)} />

@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const memberSchema = new mongoose.Schema({
   name: { type: String, required: true },
   color: { type: String, required: true },
+  photo: { type: String, default: '' },
 }, { _id: true });
 
 function generateInviteCode() {
@@ -12,6 +13,7 @@ function generateInviteCode() {
 
 const householdSchema = new mongoose.Schema({
   name: { type: String, default: 'Nuestra casa' },
+  photo: { type: String, default: '' },
   inviteCode: { type: String, unique: true, default: generateInviteCode },
   members: { type: [memberSchema], default: [] },
   budgets: {

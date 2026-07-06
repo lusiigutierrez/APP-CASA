@@ -57,7 +57,7 @@ export default function Calendario() {
               const end = e.endDate || e.date;
               if (c.date < e.date || c.date > end) return null;
               const isStart = c.date === e.date, isEnd = c.date === end;
-              const p = getPerson(members, e.who);
+              const p = getPerson(members, e.who, household);
               return <div key={e._id} className={`cal-bar ${isStart ? 'start' : ''} ${isEnd ? 'end' : ''}`} style={{ background: p.color }}>{isStart ? e.title : ''}</div>;
             }).filter(Boolean);
             const dotEvents = events.filter(e => {
@@ -70,7 +70,7 @@ export default function Calendario() {
                 <div className="num-row"><span className="num">{c.d}</span></div>
                 <div className="bars">{bars}</div>
                 {dotEvents.length > 0 && (
-                  <div className="dots">{dotEvents.slice(0, 4).map(e => <span key={e._id} className="dot" style={{ background: getPerson(members, e.who).color }}></span>)}</div>
+                  <div className="dots">{dotEvents.slice(0, 4).map(e => <span key={e._id} className="dot" style={{ background: getPerson(members, e.who, household).color }}></span>)}</div>
                 )}
               </div>
             );
@@ -81,7 +81,7 @@ export default function Calendario() {
       <div className="card">
         <h3 className="card-h">Eventos de {MESES[m]}</h3>
         {monthEvents.length ? monthEvents.map(e => {
-          const p = getPerson(members, e.who);
+          const p = getPerson(members, e.who, household);
           const end = e.endDate || e.date;
           const isMulti = end > e.date;
           const when = isMulti
@@ -89,7 +89,7 @@ export default function Calendario() {
             : `${e.date.slice(8, 10)}/${e.date.slice(5, 7)}${e.allDay ? ' · Todo el día' : (e.time ? ' · ' + e.time : '')}`;
           return (
             <div key={e._id} className="chip-row" style={{ borderLeftColor: p.color, cursor: 'pointer' }} onClick={() => setModal({ date: e.date, editingId: e._id })}>
-              <div className="chip-icon" style={{ background: p.color, fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{initials(p.name)}</div>
+              <div className="chip-icon" style={{ background: p.color, fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{p.photo ? <img src={p.photo} alt="" /> : initials(p.name)}</div>
               <div style={{ flex: 1 }}>
                 <div className="chip-title">{e.title}</div>
                 <div className="chip-sub">{when} · {p.name}</div>
@@ -105,6 +105,7 @@ export default function Calendario() {
           modal={modal}
           events={events}
           members={members}
+          household={household}
           onClose={() => setModal(null)}
           onSaved={loadEvents}
         />
@@ -113,7 +114,7 @@ export default function Calendario() {
   );
 }
 
-function DayModal({ modal, events, members, onClose, onSaved }) {
+function DayModal({ modal, events, members, household, onClose, onSaved }) {
   const editing = modal.editingId ? events.find(e => e._id === modal.editingId) : null;
   const d = new Date(modal.date + 'T00:00:00');
   const dayEvents = events.filter(e => {
@@ -173,7 +174,7 @@ function DayModal({ modal, events, members, onClose, onSaved }) {
         </div>
 
         {dayEvents.length ? dayEvents.map(e => {
-          const p = getPerson(members, e.who);
+          const p = getPerson(members, e.who, household);
           const eEnd = e.endDate || e.date;
           const isMulti = eEnd > e.date;
           const when = isMulti
@@ -181,7 +182,7 @@ function DayModal({ modal, events, members, onClose, onSaved }) {
             : (e.allDay ? 'Todo el día' : (e.time || 'Todo el día'));
           return (
             <div key={e._id} className="chip-row" style={{ borderLeftColor: p.color }}>
-              <div className="chip-icon" style={{ background: p.color, fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{initials(p.name)}</div>
+              <div className="chip-icon" style={{ background: p.color, fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{p.photo ? <img src={p.photo} alt="" /> : initials(p.name)}</div>
               <div style={{ flex: 1 }}>
                 <div className="chip-title">{e.title}</div>
                 <div className="chip-sub">{when} · {p.name}</div>

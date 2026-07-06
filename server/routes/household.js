@@ -17,6 +17,13 @@ router.patch('/name', async (req, res) => {
   res.json(household);
 });
 
+router.patch('/photo', async (req, res) => {
+  const household = await Household.findByIdAndUpdate(
+    req.householdId, { photo: req.body.photo || '' }, { new: true }
+  );
+  res.json(household);
+});
+
 router.post('/members', async (req, res) => {
   const { name, color } = req.body;
   const household = await Household.findById(req.householdId);
@@ -31,6 +38,7 @@ router.patch('/members/:memberId', async (req, res) => {
   if (!member) return res.status(404).json({ error: 'Miembro no encontrado.' });
   if (req.body.name !== undefined) member.name = req.body.name;
   if (req.body.color !== undefined) member.color = req.body.color;
+  if (req.body.photo !== undefined) member.photo = req.body.photo;
   await household.save();
   res.json(household);
 });

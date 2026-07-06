@@ -14,10 +14,31 @@ export function initials(name) {
   return (name || '?').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
 }
 
-export function getPerson(members, id) {
-  if (id === 'shared') return { id: 'shared', name: 'Todos', color: 'var(--shared)' };
+export function getPerson(members, id, household) {
+  if (id === 'shared') return { id: 'shared', name: 'Todos', color: 'var(--shared)', photo: household?.photo || '' };
   const m = (members || []).find(m => m._id === id);
-  return m ? { id: m._id, name: m.name, color: m.color } : { id, name: '(eliminado)', color: '#ddd' };
+  return m ? { id: m._id, name: m.name, color: m.color, photo: m.photo || '' } : { id, name: '(eliminado)', color: '#ddd', photo: '' };
+}
+
+export function resizePhotoToDataURL(file, maxDim = 320, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      img.onerror = reject;
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 export function peopleOptions(members) {
