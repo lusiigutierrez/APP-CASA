@@ -43,7 +43,7 @@ export default function Tareas() {
   const done = tasks.filter(t => !taskIsDue(t, todayStr));
 
   const Item = ({ t }) => {
-    const p = getPerson(members, t.assignee);
+    const p = getPerson(members, t.assignee, household);
     const due = taskIsDue(t, todayStr);
     let sub = p.name;
     if (t.recurring) {
@@ -58,7 +58,7 @@ export default function Tareas() {
     return (
       <div className={`chip-row ${!due ? 'done' : ''}`} style={{ borderLeftColor: p.color }}>
         <input type="checkbox" className="chk" checked={!due} onChange={() => toggle(t)} />
-        <div className="chip-icon" style={{ background: p.color, fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{initials(p.name)}</div>
+        <div className="chip-icon" style={{ background: p.color, fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{p.photo ? <img src={p.photo} alt="" /> : initials(p.name)}</div>
         <div style={{ flex: 1 }}>
           <div className={`chip-title ${!due ? 'strike' : ''}`}>{t.text}</div>
           <div className="chip-sub">{sub}</div>
