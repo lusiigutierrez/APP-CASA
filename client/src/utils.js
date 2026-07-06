@@ -51,3 +51,64 @@ export function taskIsDue(t, todayStr) {
 }
 
 export const FREQ_LABELS = { 1: 'día', 7: 'semana', 14: 'quincena', 30: 'mes' };
+
+export const RECURRING_LABELS = { weekly: 'semana', monthly: 'mes', yearly: 'año' };
+
+// Aritmética en fecha local (sin pasar por toISOString) para no arrastrar
+// desfases de huso horario al encadenar ocurrencias.
+function parseLocalDate(dateStr) {
+  const [y, mo, d] = dateStr.split('-').map(Number);
+  return new Date(y, mo - 1, d);
+}
+function formatLocalDate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+// Ocurrencia número `n` (0 = la fecha ancla) de una regla recurrente, calculada
+// siempre a partir del ancla original (nunca encadenando desde la anterior,
+// para no arrastrar el desfase de los meses/años con menos días).
+function occurrenceAt(anchorStr, recurring, n) {
+  const anchor = parseLocalDate(anchorStr);
+  if (recurring === 'weekly') {
+    const d = new Date(anchor);
+    d.setDate(d.getDate() + 7 * n);
+    return formatLocalDate(d);
+  }
+  if (recurring === 'monthly') {
+    const total = anchor.getMonth() + n;
+    const year = anchor.getFullYear() + Math.floor(total / 12);
+    const month = ((total % 12) + 12) % 12;
+    const day = Math.min(anchor.getDate(), daysInMonth(year, month));
+    return formatLocalDate(new Date(year, month, day));
+  }
+  if (recurring === 'yearly') {
+    const year = anchor.getFullYear() + n;
+    const day = Math.min(anchor.getDate(), daysInMonth(year, anchor.getMonth()));
+    return formatLocalDate(new Date(year, anchor.getMonth(), day));
+  }
+  return anchorStr;
+}
+
+// Expande eventos recurrentes en sus ocurrencias reales dentro de [rangeStart, rangeEnd] ('YYYY-MM-DD').
+// Los eventos no recurrentes se devuelven tal cual. Cada ocurrencia conserva el _id original del evento
+// (editar/borrar una ocurrencia afecta a toda la regla), pero cambia su `date`/`endDate`.
+export function expandRecurring(events, rangeStart, rangeEnd) {
+  const result = [];
+  (events || []).forEach(e => {
+    if (!e.recurring || e.recurring === 'none') { result.push(e); return; }
+    let n = 0;
+    let occ = occurrenceAt(e.date, e.recurring, n);
+    let guard = 0;
+    while (occ < rangeStart && guard < 5000) { n++; occ = occurrenceAt(e.date, e.recurring, n); guard++; }
+    while (occ <= rangeEnd && guard < 6000) {
+      result.push({ ...e, date: occ, endDate: occ });
+      n++;
+      occ = occurrenceAt(e.date, e.recurring, n);
+      guard++;
+    }
+  });
+  return result;
+}

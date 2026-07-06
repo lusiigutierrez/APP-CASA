@@ -14,6 +14,7 @@ function generateInviteCode() {
 const householdSchema = new mongoose.Schema({
   name: { type: String, default: 'Nuestra casa' },
   photo: { type: String, default: '' },
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
   inviteCode: { type: String, unique: true, default: generateInviteCode },
   members: { type: [memberSchema], default: [] },
   budgets: {

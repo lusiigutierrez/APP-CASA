@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -27,6 +27,20 @@ export default function Perfil() {
   const navigate = useNavigate();
   const [newMemberName, setNewMemberName] = useState('');
   const [copied, setCopied] = useState(false);
+  const [accounts, setAccounts] = useState({ ownerId: null, users: [] });
+
+  const loadAccounts = () => api.get('/household/users').then(setAccounts);
+  useEffect(() => { loadAccounts(); }, []);
+  const isOwner = accounts.ownerId === user?.id;
+  const kickUser = async (id, name) => {
+    if (!window.confirm(`¿Seguro que quieres expulsar a ${name} de la casa? Perderá el acceso inmediatamente.`)) return;
+    try {
+      await api.del(`/household/users/${id}`);
+      loadAccounts();
+    } catch (e) {
+      window.alert(e.message);
+    }
+  };
 
   const setHomeName = async (name) => { await api.patch('/household/name', { name }); refreshHousehold(); };
   const addMember = async () => {
@@ -86,6 +100,31 @@ export default function Perfil() {
           <span className="mono" style={{ fontSize: 20, fontWeight: 700, letterSpacing: 2 }}>{household?.inviteCode}</span>
           <button className="btn-ghost" onClick={copyInvite}>{copied ? 'Copiado ✓' : 'Copiar'}</button>
         </div>
+      </div>
+
+      <div className="card">
+        <h3 className="card-h">Usuarios con acceso</h3>
+        <div className="muted" style={{ marginBottom: 12 }}>
+          {isOwner ? 'Como creador/a de la casa, puedes expulsar a quien ya no quieras que tenga acceso.' : 'Solo quien creó la casa puede expulsar usuarios.'}
+        </div>
+        {accounts.users.map(u => (
+          <div className="member-card" key={u.id}>
+            <div className="avatar" style={{ background: 'var(--shared)', marginLeft: 0 }}>{initials(u.name)}</div>
+            <div style={{ flex: 1 }}>
+              <div className="row" style={{ gap: 6 }}>
+                <b style={{ color: 'var(--ink)', fontSize: 13.5 }}>{u.name}</b>
+                {u.id === accounts.ownerId && <span className="pill" style={{ background: 'var(--mustard)' }}>Creador/a</span>}
+                {u.id === user?.id && <span className="muted" style={{ fontSize: 12 }}>(tú)</span>}
+              </div>
+              <div className="muted" style={{ fontSize: 12 }}>{u.email}</div>
+            </div>
+            {isOwner && u.id !== user?.id && (
+              <button className="btn-ghost" style={{ color: 'var(--clay-d)', fontSize: 12.5, padding: '7px 12px' }} onClick={() => kickUser(u.id, u.name)}>
+                Expulsar
+              </button>
+            )}
+          </div>
+        ))}
       </div>
 
       <div className="card">

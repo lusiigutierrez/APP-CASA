@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { useAuth } from '../context/AuthContext.jsx';
-import { fmtDate, getPerson, peopleOptions, initials, MESES } from '../utils.js';
+import { fmtDate, getPerson, peopleOptions, initials, MESES, expandRecurring, RECURRING_LABELS } from '../utils.js';
 
 const DIAS = ['lun', 'mar', 'mié', 'jue', 'vie', 'sáb', 'dom'];
 
@@ -29,13 +29,14 @@ export default function Calendario() {
 
   const monthStartStr = cells.find(c => !c.other).date;
   const monthEndStr = [...cells].reverse().find(c => !c.other).date;
-  const barEvents = events.filter(e => {
+  const expanded = expandRecurring(events, monthStartStr, monthEndStr);
+  const barEvents = expanded.filter(e => {
     const end = e.endDate || e.date;
     const isBar = e.allDay || end > e.date;
     return isBar && end >= monthStartStr && e.date <= monthEndStr;
   }).sort((a, b) => a.date.localeCompare(b.date) || a._id.localeCompare(b._id));
 
-  const monthEvents = events.filter(e => e.date.slice(0, 7) === `${y}-${String(m + 1).padStart(2, '0')}`).sort((a, b) => a.date.localeCompare(b.date));
+  const monthEvents = expanded.filter(e => e.date.slice(0, 7) === `${y}-${String(m + 1).padStart(2, '0')}`).sort((a, b) => a.date.localeCompare(b.date));
 
   return (
     <>
@@ -60,7 +61,7 @@ export default function Calendario() {
               const p = getPerson(members, e.who, household);
               return <div key={e._id} className={`cal-bar ${isStart ? 'start' : ''} ${isEnd ? 'end' : ''}`} style={{ background: p.color }}>{isStart ? e.title : ''}</div>;
             }).filter(Boolean);
-            const dotEvents = events.filter(e => {
+            const dotEvents = expanded.filter(e => {
               const end = e.endDate || e.date;
               const isBar = e.allDay || end > e.date;
               return !isBar && e.date === c.date;
@@ -88,13 +89,13 @@ export default function Calendario() {
             ? `${e.date.slice(8, 10)}/${e.date.slice(5, 7)} – ${end.slice(8, 10)}/${end.slice(5, 7)}`
             : `${e.date.slice(8, 10)}/${e.date.slice(5, 7)}${e.allDay ? ' · Todo el día' : (e.time ? ' · ' + e.time : '')}`;
           return (
-            <div key={e._id} className="chip-row" style={{ borderLeftColor: p.color, cursor: 'pointer' }} onClick={() => setModal({ date: e.date, editingId: e._id })}>
+            <div key={e._id + '_' + e.date} className="chip-row" style={{ borderLeftColor: p.color, cursor: 'pointer' }} onClick={() => setModal({ date: e.date, editingId: e._id })}>
               <div className="chip-icon" style={{ background: p.color, fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{p.photo ? <img src={p.photo} alt="" /> : initials(p.name)}</div>
               <div style={{ flex: 1 }}>
                 <div className="chip-title">{e.title}</div>
-                <div className="chip-sub">{when} · {p.name}</div>
+                <div className="chip-sub">{e.recurring && e.recurring !== 'none' ? '↻ ' : ''}{when} · {p.name}</div>
               </div>
-              <button className="del" onClick={(ev) => { ev.stopPropagation(); if (window.confirm('¿Seguro que quieres eliminar este evento?')) api.del(`/events/${e._id}`).then(loadEvents); }}>✕</button>
+              <button className="del" onClick={(ev) => { ev.stopPropagation(); if (window.confirm('¿Seguro que quieres eliminar este evento? Si se repite, se eliminarán todas sus repeticiones.')) api.del(`/events/${e._id}`).then(loadEvents); }}>✕</button>
             </div>
           );
         }) : <div className="empty">Mes tranquilo, sin eventos todavía.</div>}
@@ -117,10 +118,8 @@ export default function Calendario() {
 function DayModal({ modal, events, members, household, onClose, onSaved }) {
   const editing = modal.editingId ? events.find(e => e._id === modal.editingId) : null;
   const d = new Date(modal.date + 'T00:00:00');
-  const dayEvents = events.filter(e => {
-    const end = e.endDate || e.date;
-    return modal.date >= e.date && modal.date <= end;
-  }).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+  const dayEvents = expandRecurring(events, modal.date, modal.date)
+    .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 
   const [title, setTitle] = useState(editing?.title || '');
   const [start, setStart] = useState(editing?.date || modal.date);
@@ -128,28 +127,34 @@ function DayModal({ modal, events, members, household, onClose, onSaved }) {
   const [allDay, setAllDay] = useState(editing?.allDay || false);
   const [time, setTime] = useState(editing?.time || '');
   const [who, setWho] = useState(editing?.who || 'shared');
+  const [recurring, setRecurring] = useState(editing?.recurring || 'none');
   const [editingId, setEditingId] = useState(modal.editingId || null);
 
   const opts = peopleOptions(members);
 
   const startEdit = (ev) => {
-    setEditingId(ev._id);
-    setTitle(ev.title);
-    setStart(ev.date);
-    setEnd(ev.endDate || ev.date);
-    setAllDay(ev.allDay);
-    setTime(ev.time || '');
-    setWho(ev.who);
+    // Si `ev` es una ocurrencia expandida de un evento recurrente, se edita la regla
+    // original (con su fecha ancla real), no la fecha concreta de esta ocurrencia.
+    const anchor = events.find(x => x._id === ev._id) || ev;
+    setEditingId(anchor._id);
+    setTitle(anchor.title);
+    setStart(anchor.date);
+    setEnd(anchor.endDate || anchor.date);
+    setAllDay(anchor.allDay);
+    setTime(anchor.time || '');
+    setWho(anchor.who);
+    setRecurring(anchor.recurring || 'none');
   };
   const resetForm = () => {
     setEditingId(null); setTitle(''); setStart(modal.date); setEnd(modal.date);
-    setAllDay(false); setTime(''); setWho('shared');
+    setAllDay(false); setTime(''); setWho('shared'); setRecurring('none');
   };
 
   const submit = async () => {
     if (!title.trim()) return;
-    let finalEnd = end < start ? start : end;
-    const payload = { title: title.trim(), date: start, endDate: finalEnd, allDay, time: allDay ? '' : time, who };
+    const isRecurring = recurring !== 'none';
+    let finalEnd = isRecurring ? start : (end < start ? start : end);
+    const payload = { title: title.trim(), date: start, endDate: finalEnd, allDay, time: allDay ? '' : time, who, recurring };
     if (editingId) {
       await api.patch(`/events/${editingId}`, payload);
     } else {
@@ -160,7 +165,7 @@ function DayModal({ modal, events, members, household, onClose, onSaved }) {
   };
 
   const remove = async (id) => {
-    if (!window.confirm('¿Seguro que quieres eliminar este evento?')) return;
+    if (!window.confirm('¿Seguro que quieres eliminar este evento? Si se repite, se eliminarán todas sus repeticiones.')) return;
     await api.del(`/events/${id}`);
     if (editingId === id) resetForm();
     onSaved();
@@ -186,7 +191,7 @@ function DayModal({ modal, events, members, household, onClose, onSaved }) {
               <div className="chip-icon" style={{ background: p.color, fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>{p.photo ? <img src={p.photo} alt="" /> : initials(p.name)}</div>
               <div style={{ flex: 1 }}>
                 <div className="chip-title">{e.title}</div>
-                <div className="chip-sub">{when} · {p.name}</div>
+                <div className="chip-sub">{e.recurring && e.recurring !== 'none' ? '↻ ' : ''}{when} · {p.name}</div>
               </div>
               <button className="del" onClick={() => startEdit(e)}>✎</button>
               <button className="del" onClick={() => remove(e._id)}>✕</button>
@@ -199,10 +204,14 @@ function DayModal({ modal, events, members, household, onClose, onSaved }) {
           <input className="inp" style={{ flex: '1 1 100%' }} placeholder="Título del evento" value={title} onChange={e => setTitle(e.target.value)} />
         </div>
         <div className="addbar" style={{ alignItems: 'center' }}>
-          <label className="muted" style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>Desde</label>
+          <label className="muted" style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>{recurring !== 'none' ? 'Fecha' : 'Desde'}</label>
           <input className="inp" type="date" style={{ maxWidth: 150 }} value={start} onChange={e => setStart(e.target.value)} />
-          <label className="muted" style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>Hasta</label>
-          <input className="inp" type="date" style={{ maxWidth: 150 }} value={end} onChange={e => setEnd(e.target.value)} />
+          {recurring === 'none' && (
+            <>
+              <label className="muted" style={{ fontSize: 12.5, whiteSpace: 'nowrap' }}>Hasta</label>
+              <input className="inp" type="date" style={{ maxWidth: 150 }} value={end} onChange={e => setEnd(e.target.value)} />
+            </>
+          )}
         </div>
         <div className="addbar" style={{ alignItems: 'center' }}>
           <label className="row muted" style={{ fontSize: 13, gap: 6 }}>
@@ -214,7 +223,18 @@ function DayModal({ modal, events, members, household, onClose, onSaved }) {
           <select className="inp" style={{ flex: 1 }} value={who} onChange={e => setWho(e.target.value)}>
             {opts.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
           </select>
+          <select className="inp" style={{ maxWidth: 150 }} value={recurring} onChange={e => setRecurring(e.target.value)}>
+            <option value="none">No se repite</option>
+            <option value="weekly">Cada semana</option>
+            <option value="monthly">Cada mes</option>
+            <option value="yearly">Cada año</option>
+          </select>
         </div>
+        {recurring !== 'none' && (
+          <div className="muted" style={{ fontSize: 12, margin: '-4px 0 10px' }}>
+            Se repetirá cada {RECURRING_LABELS[recurring]} a partir de esta fecha. Editar o borrar afecta a todas las repeticiones.
+          </div>
+        )}
         <div className="row" style={{ gap: 9 }}>
           <button className="btn" style={{ flex: 1 }} onClick={submit}>{editingId ? 'Guardar cambios' : 'Añadir'}</button>
           {editingId && <button className="btn-ghost" onClick={resetForm}>Cancelar</button>}

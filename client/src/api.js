@@ -19,6 +19,10 @@ async function request(path, { method = 'GET', body } = {}) {
   try { data = await res.json(); } catch (e) { /* respuesta sin cuerpo */ }
 
   if (!res.ok) {
+    if (res.status === 401 && token) {
+      localStorage.removeItem('casa_token');
+      if (!location.pathname.startsWith('/login')) location.href = '/login';
+    }
     throw new Error((data && data.error) || 'Error de red');
   }
   return data;

@@ -8,6 +8,7 @@ const eventSchema = new mongoose.Schema({
   allDay: { type: Boolean, default: false },
   time: { type: String, default: '' },          // 'HH:MM'
   who: { type: String, default: 'shared' },      // id de miembro o 'shared'
+  recurring: { type: String, enum: ['none', 'weekly', 'monthly', 'yearly'], default: 'none' },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Event', eventSchema);

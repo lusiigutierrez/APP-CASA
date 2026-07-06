@@ -32,6 +32,7 @@ router.post('/register', async (req, res) => {
     }
 
     let household;
+    let isNewHousehold = false;
     if (inviteCode) {
       household = await Household.findOne({ inviteCode: inviteCode.trim().toUpperCase() });
       if (!household) {
@@ -39,6 +40,7 @@ router.post('/register', async (req, res) => {
       }
     } else {
       household = await Household.create({ name: homeName || 'Nuestra casa' });
+      isNewHousehold = true;
     }
 
     const color = MEMBER_COLORS[household.members.length % MEMBER_COLORS.length];
@@ -49,6 +51,11 @@ router.post('/register', async (req, res) => {
     const user = new User({ email: email.toLowerCase().trim(), name, household: household._id, memberId: newMember._id });
     await user.setPassword(password);
     await user.save();
+
+    if (isNewHousehold) {
+      household.owner = user._id;
+      await household.save();
+    }
 
     const token = signToken(user);
     res.status(201).json({ token, user: user.toSafeJSON(), household });
