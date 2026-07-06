@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { SHOP_ICONS } from '../components/icons.jsx';
 
 const SHOP_CATS = [
-  ['Fruta y verdura', 'F', 'var(--sage)'],
-  ['Carne y pescado', 'C', 'var(--clay)'],
-  ['Despensa', 'D', 'var(--mustard)'],
-  ['Lácteos', 'L', 'var(--blue)'],
-  ['Limpieza', 'Li', 'var(--plum)'],
-  ['Higiene', 'H', 'var(--amber)'],
-  ['Mascota', 'M', 'var(--shared)'],
-  ['Otros', 'O', 'var(--sage-d)'],
+  ['Fruta y verdura', 'var(--sage)'],
+  ['Carne y pescado', 'var(--clay)'],
+  ['Despensa', 'var(--mustard)'],
+  ['Lácteos', 'var(--blue)'],
+  ['Limpieza', 'var(--plum)'],
+  ['Higiene', 'var(--amber)'],
+  ['Mascota', 'var(--shared)'],
+  ['Otros', 'var(--sage-d)'],
 ];
 
 export default function Compra() {
@@ -51,14 +52,14 @@ export default function Compra() {
 
       {items.length ? (
         <div className="shop-grid">
-          {SHOP_CATS.map(([cat, letter, color]) => {
+          {SHOP_CATS.map(([cat, color]) => {
             const catItems = items.filter(i => i.category === cat);
             if (!catItems.length) return null;
             const pending = catItems.filter(i => !i.done).length;
             return (
               <div className="shop-card" key={cat}>
                 <div className="shop-card-head">
-                  <div className="badge" style={{ background: color }}>{letter}</div>
+                  <div className="badge" style={{ background: color }}>{SHOP_ICONS[cat] || SHOP_ICONS.Otros}</div>
                   <div className="name">{cat}</div>
                   <div className="count">{pending}</div>
                 </div>
