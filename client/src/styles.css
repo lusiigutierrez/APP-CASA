@@ -254,4 +254,5 @@ body.dark .auth-card{background:#2A2740;}
   .tab.active,.tab:hover{transform:none;}
   #main-inner{padding:22px 16px 40px;}
   .stat-grid{grid-template-columns:1fr 1fr;}
+  .inp,.note textarea,.menu-cell .menu-select,.menu-cell .menu-custom{font-size:16px;}
 }
