@@ -7,6 +7,7 @@ const expenseSchema = new mongoose.Schema({
   category: { type: String, required: true },
   person: { type: String, default: 'shared' },
   date: { type: String, required: true }, // 'YYYY-MM-DD'
+  recurringSource: { type: mongoose.Schema.Types.ObjectId, ref: 'RecurringExpense', default: null },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Expense', expenseSchema);

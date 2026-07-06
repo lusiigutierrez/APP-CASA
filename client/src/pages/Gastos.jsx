@@ -24,8 +24,13 @@ export default function Gastos() {
   const [form, setForm] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
 
+  const [recurring, setRecurring] = useState([]);
+  const emptyRecurForm = { desc: '', amount: '', category: 'Comida', person: 'shared', dayOfMonth: '1' };
+  const [recurForm, setRecurForm] = useState(emptyRecurForm);
+
   const load = () => api.get('/expenses').then(setExpenses);
-  useEffect(() => { load(); }, []);
+  const loadRecurring = () => api.get('/expenses/recurring').then(setRecurring);
+  useEffect(() => { load(); loadRecurring(); }, []);
 
   const budgets = household?.budgets || {};
 
@@ -57,6 +62,19 @@ export default function Gastos() {
     const newBudgets = { ...budgets, [cat]: Number(val) || 0 };
     await api.put('/household/budgets', { budgets: newBudgets });
     refreshHousehold();
+  };
+
+  const addRecurring = async () => {
+    if (!recurForm.desc.trim() || !recurForm.amount) return;
+    await api.post('/expenses/recurring', { ...recurForm, desc: recurForm.desc.trim(), amount: Number(recurForm.amount), dayOfMonth: Number(recurForm.dayOfMonth) || 1 });
+    setRecurForm(emptyRecurForm);
+    loadRecurring();
+    load();
+  };
+  const delRecurring = async (id) => {
+    if (!window.confirm('¿Seguro que quieres eliminar este gasto recurrente? Los gastos ya generados no se borrarán.')) return;
+    await api.del(`/expenses/recurring/${id}`);
+    loadRecurring();
   };
 
   const todayStr = fmtDate(new Date());
@@ -131,6 +149,44 @@ export default function Gastos() {
           {!Object.keys(byCat).length && !Object.values(budgets).some(Boolean) && <div className="empty">Sin gastos este mes</div>}
         </div>
       </div>
+
+      <div className="card">
+        <h3 className="card-h">Gastos recurrentes</h3>
+        <div className="muted" style={{ margin: '-6px 0 12px', fontSize: 12.5 }}>Se añaden solos cada mes (alquiler, suscripciones...).</div>
+        {recurring.length ? recurring.map(r => {
+          const icon = EXP_ICONS[r.category] || EXP_ICONS.Otros;
+          const color = EXP_COLOR[r.category] || 'var(--shared)';
+          const p = getPerson(members, r.person);
+          return (
+            <div key={r._id} className="chip-row" style={{ borderLeftColor: color }}>
+              <div className="chip-icon" style={{ background: color, color: 'var(--ink)' }}>{icon}</div>
+              <div style={{ flex: 1 }}>
+                <div className="chip-title">{r.desc}</div>
+                <div className="chip-sub">Cada mes el día {r.dayOfMonth} · {r.category} · {p.name}</div>
+              </div>
+              <span className="mono" style={{ fontWeight: 700 }}>{Number(r.amount).toFixed(2)} €</span>
+              <button className="del" onClick={() => delRecurring(r._id)}>✕</button>
+            </div>
+          );
+        }) : <div className="empty" style={{ marginBottom: 14 }}>No tienes gastos recurrentes.</div>}
+        <div className="addbar" style={{ marginTop: recurring.length ? 14 : 0 }}>
+          <input className="inp" placeholder="Concepto (ej. Alquiler)" value={recurForm.desc} onChange={e => setRecurForm(f => ({ ...f, desc: e.target.value }))} />
+          <input className="inp" type="number" step="0.01" placeholder="€" style={{ maxWidth: 90 }} value={recurForm.amount} onChange={e => setRecurForm(f => ({ ...f, amount: e.target.value }))} />
+        </div>
+        <div className="addbar">
+          <select className="inp" value={recurForm.category} onChange={e => setRecurForm(f => ({ ...f, category: e.target.value }))}>
+            {CATS.map(c => <option key={c}>{c}</option>)}
+          </select>
+          <select className="inp" value={recurForm.person} onChange={e => setRecurForm(f => ({ ...f, person: e.target.value }))}>
+            {opts.map(o => <option key={o.id} value={o.id}>{o.name}</option>)}
+          </select>
+          <select className="inp" style={{ maxWidth: 150 }} value={recurForm.dayOfMonth} onChange={e => setRecurForm(f => ({ ...f, dayOfMonth: e.target.value }))}>
+            {Array.from({ length: 28 }, (_, i) => i + 1).map(d => <option key={d} value={d}>Día {d}</option>)}
+          </select>
+        </div>
+        <button className="btn" onClick={addRecurring}>Añadir gasto recurrente</button>
+      </div>
+
       <div className="card">
         <h3 className="card-h">Historial</h3>
         {monthGroups.length ? monthGroups.map(group => {
@@ -150,7 +206,7 @@ export default function Gastos() {
                     <div className="chip-icon" style={{ background: color, color: 'var(--ink)' }}>{icon}</div>
                     <div style={{ flex: 1 }}>
                       <div className="chip-title">{e.desc}</div>
-                      <div className="chip-sub">{e.date.slice(8, 10)}/{e.date.slice(5, 7)} · {e.category} · {p.name}</div>
+                      <div className="chip-sub">{e.recurringSource ? '↻ ' : ''}{e.date.slice(8, 10)}/{e.date.slice(5, 7)} · {e.category} · {p.name}</div>
                     </div>
                     <span className="mono" style={{ fontWeight: 700 }}>{Number(e.amount).toFixed(2)} €</span>
                     <button className="del" onClick={(ev) => { ev.stopPropagation(); del(e._id); }}>✕</button>
