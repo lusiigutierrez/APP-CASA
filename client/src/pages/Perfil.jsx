@@ -38,7 +38,11 @@ export default function Perfil() {
   };
   const renameMember = async (id, name) => { await api.patch(`/household/members/${id}`, { name }); refreshHousehold(); };
   const recolorMember = async (id, color) => { await api.patch(`/household/members/${id}`, { color }); refreshHousehold(); };
-  const removeMember = async (id) => { await api.del(`/household/members/${id}`); refreshHousehold(); };
+  const removeMember = async (id, name) => {
+    if (!window.confirm(`¿Seguro que quieres eliminar a ${name || 'esta persona'} de la casa?`)) return;
+    await api.del(`/household/members/${id}`);
+    refreshHousehold();
+  };
   const setMemberPhoto = async (id, file) => {
     const photo = await resizePhotoToDataURL(file);
     await api.patch(`/household/members/${id}`, { photo });
@@ -92,7 +96,7 @@ export default function Perfil() {
               <PhotoAvatar photo={m.photo} color={m.color} label={initials(m.name)}
                 onPick={file => setMemberPhoto(m._id, file)} onRemove={() => removeMemberPhoto(m._id)} />
               <input className="inp" style={{ flex: 1 }} defaultValue={m.name} onBlur={e => renameMember(m._id, e.target.value)} />
-              <button className="del" onClick={() => removeMember(m._id)}>✕</button>
+              <button className="del" onClick={() => removeMember(m._id, m.name)}>✕</button>
             </div>
             <div className="color-row" style={{ margin: '4px 0 12px 52px' }}>
               {MEMBER_COLORS.map(c => (

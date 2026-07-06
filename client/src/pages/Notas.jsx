@@ -15,7 +15,11 @@ export default function Notas() {
     load();
   };
   const updateNote = async (id, text) => { await api.patch(`/notes/${id}`, { text }); };
-  const delNote = async (id) => { await api.del(`/notes/${id}`); load(); };
+  const delNote = async (id, text) => {
+    if (text && text.trim() && !window.confirm('¿Seguro que quieres eliminar esta nota?')) return;
+    await api.del(`/notes/${id}`);
+    load();
+  };
 
   const sorted = [...notes].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -28,7 +32,7 @@ export default function Notas() {
       <div className="notes-grid">
         {sorted.length ? sorted.map(n => (
           <div className="note" style={{ background: n.color }} key={n._id}>
-            <button className="del" onClick={() => delNote(n._id)}>✕</button>
+            <button className="del" onClick={() => delNote(n._id, n.text)}>✕</button>
             <textarea placeholder="Escribe algo..." defaultValue={n.text} onBlur={e => updateNote(n._id, e.target.value)} />
           </div>
         )) : <div className="empty">No hay notas todavía.</div>}

@@ -94,7 +94,7 @@ export default function Calendario() {
                 <div className="chip-title">{e.title}</div>
                 <div className="chip-sub">{when} · {p.name}</div>
               </div>
-              <button className="del" onClick={(ev) => { ev.stopPropagation(); api.del(`/events/${e._id}`).then(loadEvents); }}>✕</button>
+              <button className="del" onClick={(ev) => { ev.stopPropagation(); if (window.confirm('¿Seguro que quieres eliminar este evento?')) api.del(`/events/${e._id}`).then(loadEvents); }}>✕</button>
             </div>
           );
         }) : <div className="empty">Mes tranquilo, sin eventos todavía.</div>}
@@ -160,6 +160,7 @@ function DayModal({ modal, events, members, household, onClose, onSaved }) {
   };
 
   const remove = async (id) => {
+    if (!window.confirm('¿Seguro que quieres eliminar este evento?')) return;
     await api.del(`/events/${id}`);
     if (editingId === id) resetForm();
     onSaved();

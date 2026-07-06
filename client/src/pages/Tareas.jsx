@@ -33,7 +33,11 @@ export default function Tareas() {
     }
     load();
   };
-  const del = async (id) => { await api.del(`/tasks/${id}`); load(); };
+  const del = async (id) => {
+    if (!window.confirm('¿Seguro que quieres eliminar esta tarea?')) return;
+    await api.del(`/tasks/${id}`);
+    load();
+  };
 
   const pending = tasks.filter(t => taskIsDue(t, todayStr));
   const done = tasks.filter(t => !taskIsDue(t, todayStr));

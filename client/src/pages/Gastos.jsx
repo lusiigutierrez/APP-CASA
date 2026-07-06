@@ -20,20 +20,39 @@ export default function Gastos() {
   const { household, refreshHousehold } = useAuth();
   const members = household?.members || [];
   const [expenses, setExpenses] = useState([]);
-  const [form, setForm] = useState({ desc: '', amount: '', category: 'Comida', person: 'shared', date: fmtDate(new Date()) });
+  const emptyForm = { desc: '', amount: '', category: 'Comida', person: 'shared', date: fmtDate(new Date()) };
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState(null);
 
   const load = () => api.get('/expenses').then(setExpenses);
   useEffect(() => { load(); }, []);
 
   const budgets = household?.budgets || {};
 
-  const add = async () => {
+  const submit = async () => {
     if (!form.desc.trim() || !form.amount) return;
-    await api.post('/expenses', { ...form, desc: form.desc.trim(), amount: Number(form.amount) });
-    setForm(f => ({ ...f, desc: '', amount: '' }));
+    const payload = { ...form, desc: form.desc.trim(), amount: Number(form.amount) };
+    if (editingId) {
+      await api.patch(`/expenses/${editingId}`, payload);
+      setEditingId(null);
+      setForm(emptyForm);
+    } else {
+      await api.post('/expenses', payload);
+      setForm(f => ({ ...f, desc: '', amount: '' }));
+    }
     load();
   };
-  const del = async (id) => { await api.del(`/expenses/${id}`); load(); };
+  const startEdit = (e) => {
+    setEditingId(e._id);
+    setForm({ desc: e.desc, amount: String(e.amount), category: e.category, person: e.person, date: e.date });
+  };
+  const cancelEdit = () => { setEditingId(null); setForm(emptyForm); };
+  const del = async (id) => {
+    if (!window.confirm('¿Seguro que quieres eliminar este gasto?')) return;
+    if (editingId === id) cancelEdit();
+    await api.del(`/expenses/${id}`);
+    load();
+  };
   const setBudget = async (cat, val) => {
     const newBudgets = { ...budgets, [cat]: Number(val) || 0 };
     await api.put('/household/budgets', { budgets: newBudgets });
@@ -63,7 +82,7 @@ export default function Gastos() {
       <div className="section-title">Gastos</div>
       <div className="grid grid-2">
         <div className="card">
-          <h3 className="card-h">Añadir gasto</h3>
+          <h3 className="card-h">{editingId ? 'Editar gasto' : 'Añadir gasto'}</h3>
           <div className="addbar">
             <input className="inp" placeholder="Concepto" value={form.desc} onChange={e => setForm(f => ({ ...f, desc: e.target.value }))} />
             <input className="inp" type="number" step="0.01" placeholder="€" style={{ maxWidth: 90 }} value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} />
@@ -77,7 +96,10 @@ export default function Gastos() {
             </select>
             <input className="inp" type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
           </div>
-          <button className="btn" onClick={add}>Añadir gasto</button>
+          <div className="row" style={{ gap: 9 }}>
+            <button className="btn" style={{ flex: 1 }} onClick={submit}>{editingId ? 'Guardar cambios' : 'Añadir gasto'}</button>
+            {editingId && <button className="btn-ghost" onClick={cancelEdit}>Cancelar</button>}
+          </div>
         </div>
         <div className="card">
           <h3 className="card-h">Este mes: <span className="mono" style={{ color: 'var(--mustard-d)' }}>{total.toFixed(2)} €</span></h3>
@@ -124,14 +146,14 @@ export default function Gastos() {
                 const color = EXP_COLOR[e.category] || 'var(--shared)';
                 const p = getPerson(members, e.person);
                 return (
-                  <div key={e._id} className="chip-row" style={{ borderLeftColor: color }}>
+                  <div key={e._id} className="chip-row" style={{ borderLeftColor: color, cursor: 'pointer' }} onClick={() => startEdit(e)}>
                     <div className="chip-icon" style={{ background: color, color: 'var(--ink)' }}>{icon}</div>
                     <div style={{ flex: 1 }}>
                       <div className="chip-title">{e.desc}</div>
                       <div className="chip-sub">{e.date.slice(8, 10)}/{e.date.slice(5, 7)} · {e.category} · {p.name}</div>
                     </div>
                     <span className="mono" style={{ fontWeight: 700 }}>{Number(e.amount).toFixed(2)} €</span>
-                    <button className="del" onClick={() => del(e._id)}>✕</button>
+                    <button className="del" onClick={(ev) => { ev.stopPropagation(); del(e._id); }}>✕</button>
                   </div>
                 );
               })}
