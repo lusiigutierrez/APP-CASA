@@ -32,7 +32,9 @@ export default function AppLayout() {
         <div className="household-row">
           <div className="avatar-stack">
             {(household?.members || []).slice(0, 4).map(m => (
-              <div className="avatar" key={m._id} style={{ background: m.color }}>{initials(m.name)}</div>
+              <div className="avatar" key={m._id} style={{ background: m.photo ? undefined : m.color }}>
+                {m.photo ? <img src={m.photo} alt="" /> : initials(m.name)}
+              </div>
             ))}
           </div>
           <div className="names">{(household?.members || []).map(m => m.name).join(' · ') || 'Añadir personas'}</div>

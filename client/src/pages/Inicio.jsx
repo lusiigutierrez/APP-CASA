@@ -45,8 +45,8 @@ export default function Inicio() {
     <>
       <div className="dash-hero">
         <div className="row">
-          <div className="avatar avatar-hero" style={{ background: members[0]?.color || 'var(--shared)' }}>
-            {members[0] ? members[0].name[0].toUpperCase() : 'C'}
+          <div className="avatar avatar-hero" style={{ background: household?.photo ? undefined : (members[0]?.color || 'var(--shared)') }}>
+            {household?.photo ? <img src={household.photo} alt="" /> : (members[0] ? members[0].name[0].toUpperCase() : 'C')}
           </div>
           <div>
             <div className="eyebrow">{DIAS_FULL[dowIndex]}, {today.getDate()} de {MESES[today.getMonth()]}</div>
